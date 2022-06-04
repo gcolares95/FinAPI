@@ -6,13 +6,22 @@ const app = express();
 app.use(express.json());
 
 const customers = [];
-/**
- * cpf - string
- * name - string
- * id - uuid
- * statement []
- */
-// '/account' é o nome do recurso
+
+// Middleware
+function verifyIfExistsAccountCPF(request, response, next) {
+    const { cpf } = request.headers;
+
+    const customer = customers.find(customer => customer.cpf === cpf);
+
+    if(!customer) {
+        return response.status(400).json({ error: "Customer not found" });
+    }
+
+    request.customer = customer; // "request.nomeDoRequest = obj", para repassar o a informação dentro do middleware para demais rotas, nesse caso o "customer"
+
+    return next();
+}
+
 app.post("/account", (request, response) => {
     const { cpf, name } = request.body;
 
@@ -34,17 +43,22 @@ app.post("/account", (request, response) => {
     return response.status(201).send();
 });
 
-app.get("/statement/", (request, response) => {
-    const { cpf } = request.headers;
+// app.use(verifyIfExistsAccountCPF); todas as requisições abaixo vão receber o Middleware
 
-    const customer = customers.find(customer => customer.cpf === cpf);
-
-    if(!customer) {
-        return response.status(400).json({ error: "Customer not found" });
-    }
-
+app.get("/statement/", verifyIfExistsAccountCPF, (request, response) => {
+    const { customer } = request;
+    
     return response.json(customer.statement);
 });
 
 
 app.listen(3333);
+
+
+
+/** 
+ * Middlewares
+ Função que fica entre nosso request e response
+ * - Validação de Token
+ * - Validações
+ */
